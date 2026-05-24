@@ -126,9 +126,6 @@ def abuse_ipdb(ip):
             result["UsageType"] = data.get("usageType")
             result["Country"] = data.get("countryCode")
 
-            # Store only count of reports
-            result["ReportsCount"] = len(data.get("reports", []))
-
         else:
             result["error"] = f"AbuseIPDB request failed: {response.status_code}"
 
@@ -184,7 +181,6 @@ def print_data(vt, abuse, cisco):
         print("\tUsage Type:", abuse.get("UsageType"))
         print("\tTor:", abuse.get("isTor"))
         print("\tTotal Reports:", abuse.get("TotalReports"))
-        print("\tReports Count:", abuse.get("ReportsCount"))
 
     print("\n=== Cisco Talos ===")
     print(cisco.get("url"))
