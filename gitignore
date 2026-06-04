@@ -1,4 +1,5 @@
 # Environment variables - never commit real credentials
+
 .env
 
 # Python
