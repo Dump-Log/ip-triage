@@ -19,17 +19,18 @@ import sys
 import requests
 from dotenv import load_dotenv
 import os
-
 import ipaddress
 from concurrent.futures import ThreadPoolExecutor
+from colorama import init, Fore, Style
+init(autoreset=True)
 
 # ----------------------------
 # API Keys (populate these)
 # ----------------------------
 load_dotenv()
-
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
 ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
+GREYNOISE_API_KEY = os.getenv("GREYNOISE_API_KEY")
 
 # exit if an api key is missing
 if not VIRUSTOTAL_API_KEY or not ABUSEIPDB_API_KEY:
@@ -157,9 +158,43 @@ def abuse_ipdb(ip):
 
 
 # ----------------------------
+# Greynoise Lookup
+# ----------------------------
+def greynoise(ip):
+    """Query GreyNoise Community API for IP classification."""
+    result = {}
+    try:
+        url = f"https://api.greynoise.io/v3/community/{ip}"
+        headers = {"Accept": "application/json"}
+        if GREYNOISE_API_KEY:
+            headers["key"] = GREYNOISE_API_KEY
+
+        response = requests.get(url, headers=headers, timeout=10)
+        result["url"] = f"https://viz.greynoise.io/ip/{ip}"
+
+        if response.status_code == 200:
+            data = response.json()
+            result["Classification"] = data.get("classification")
+            result["Noise"]          = data.get("noise")
+            result["Riot"]           = data.get("riot")
+            result["Name"]           = data.get("name")
+            result["Last Seen"]      = data.get("last_seen")
+        elif response.status_code == 404:
+            result["Classification"] = "Not found in GreyNoise dataset"
+        else:
+            result["error"] = f"GreyNoise request failed: {response.status_code}"
+
+    except requests.exceptions.RequestException as e:
+        result["error"] = f"GreyNoise request error: {e}"
+    except Exception as e:
+        result["error"] = f"GreyNoise processing error: {e}"
+
+    return result
+
+# ----------------------------
 # Output Formatting
 # ----------------------------
-def print_data(ip, vt, abuse):
+def print_data(ip, vt, abuse, gn):
     """Print aggregated intelligence results for a single IP."""
 
     W = 54
@@ -170,11 +205,11 @@ def print_data(ip, vt, abuse):
 
     # IP header
     print(f"\n{'=' * W}")
-    print(f"  TARGET IP: {ip}")
+    print(f"{Fore.CYAN}{Style.BRIGHT}{ip}{Style.RESET_ALL}")
     print(f"{'=' * W}")
 
     # VirusTotal
-    print(f"\n  [ VirusTotal ]")
+    print(f"\n  {Fore.YELLOW}[ VirusTotal ]{Style.RESET_ALL}")
     print(f"  {'-' * (W - 2)}")
     if "error" in vt:
         print(f"  {vt['error']}")
@@ -188,7 +223,7 @@ def print_data(ip, vt, abuse):
         row("Comments:", vt.get("CommentsCount"))
 
     # AbuseIPDB
-    print(f"\n  [ AbuseIPDB ]")
+    print(f"\n  {Fore.YELLOW}[ AbuseIPDB ]{Style.RESET_ALL}")
     print(f"  {'-' * (W - 2)}")
     if "error" in abuse:
         print(f"  {abuse['error']}")
@@ -201,6 +236,20 @@ def print_data(ip, vt, abuse):
         row("Usage Type:", abuse.get("UsageType"))
         row("Tor:", abuse.get("isTor"))
         row("Total Reports:", abuse.get("TotalReports"))
+
+    # GreyNoise
+    print(f"\n  {Fore.YELLOW}[ GreyNoise ]{Style.RESET_ALL}")
+    print(f"  {'-' * (W - 2)}")
+    if "error" in gn:
+        print(f"  {gn['error']}")
+    else:
+        print(f"  {gn.get('url')}")
+        print()
+        row("Classification:", gn.get("Classification"))
+        row("Noise:", gn.get("Noise"))
+        row("Riot:", gn.get("Riot"))
+        row("Name:", gn.get("Name"))
+        row("Last Seen:", gn.get("Last Seen"))
 
 # ----------------------------
 # Main Execution
@@ -234,12 +283,14 @@ if __name__ == "__main__":
             with ThreadPoolExecutor(max_workers=3) as executor:
                 vt_future = executor.submit(virus_total, ip)
                 abuse_future = executor.submit(abuse_ipdb, ip)
+                gn_future = executor.submit(greynoise, ip)
 
                 vt_result = vt_future.result()
                 abuse_result = abuse_future.result()
+                gn_result = gn_future.result()
 
             # Print results
-            print_data(ip, vt_result, abuse_result)
+            print_data(ip, vt_result, abuse_result, gn_result)
 
     except KeyboardInterrupt:
         print("\nExecution interrupted by user.")

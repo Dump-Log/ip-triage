@@ -9,4 +9,4 @@ The AI code did not require any additional corrections and is present on the mai
 Claude AI was also utilized to help create the README.md file, since it had the code I prompted
 it to create a read me for Github. Numeriuos URL's and facts needed to be corrected, or added, but this saved time generating the general flow of the readme.
 
-
+Claude AI was used to help modify the code and include the feedback received from classmates.
