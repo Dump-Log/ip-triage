@@ -3,9 +3,11 @@
 # Queries multiple IP reputation services and aggregates results:
 # - VirusTotal
 # - AbuseIPDB
+# - GreyNoise
 #
 # Input:
 #   - Accepts a defanged IP (e.g. 1[.]2[.]3[.]4) or normal IP
+#   - Can accept multiple IPs at once
 #
 # Output:
 #   - Parsed intelligence results
@@ -14,6 +16,7 @@
 # API Documentation:
 #   - VirusTotal: https://docs.virustotal.com/reference/ip-info
 #   - AbuseIPDB: https://docs.abuseipdb.com/
+#   - GreyNoise: https://docs.greynoise.io/docs/using-the-greynoise-community-api
 
 import sys
 import requests
